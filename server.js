@@ -125,9 +125,24 @@ app.put('/api/v1/clients/:id', (req, res) => {
   let clients = db.prepare('select * from clients').all();
   const client = clients.find(client => client.id === id);
 
-  /* ---------- Update code below ----------*/
+  // Update client status
+  if (status && (status === 'backlog' || status === 'in-progress' || status === 'complete')) {
+    db.prepare('update clients set status = ? where id = ?').run(status, id);
+  }
 
+  // Update client priority
+  if (priority && Number.isInteger(priority) && priority > 0) {
+    clients
+      .filter(c => c.status === client.status)
+      .forEach(c => {
+        if (c.id !== id && c.priority >= priority) {
+          db.prepare('update clients set priority = priority + 1 where id = ?').run(c.id);
+        }
+      });
+    db.prepare('update clients set priority = ? where id = ?').run(priority, id);
+  }
 
+  clients = db.prepare('select * from clients').all();
 
   return res.status(200).send(clients);
 });
